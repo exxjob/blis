@@ -72,6 +72,9 @@ void PASTEMAC(ch,varname) \
 	ukr_t   cxc_ker_id    = bli_is_col_packed( schema ) ? BLIS_PACKM_NRXNR_DIAG_KER \
 	                                                    : BLIS_PACKM_MRXMR_DIAG_KER; \
 \
+	ctype   minus_kappa; \
+	PASTEMAC(ch,neg2s)( *kappa, minus_kappa ); \
+\
 	if ( bli_is_1m_packed( schema ) ) \
 	{ \
 		cxk_ker_id = bli_is_col_packed( schema ) ? BLIS_PACKM_NRXK_1ER_KER \
@@ -124,13 +127,19 @@ void PASTEMAC(ch,varname) \
 		ctype* c10         = c; \
 		inc_t  incc10      = incc; \
 		inc_t  ldc10       = ldc; \
+		ctype* kappa_use   = kappa; \
 \
 		if ( bli_is_upper( uploc ) ) \
 		{ \
 			bli_reflect_to_stored_part( diagoffc, c10, incc10, ldc10 ); \
 \
-			if ( bli_is_hermitian( strucc ) ) \
+			if ( bli_is_hermitian( strucc ) || \
+			     bli_is_skew_hermitian( strucc ) ) \
 				bli_toggle_conj( &conjc10 ); \
+\
+			if ( bli_is_skew_symmetric( strucc ) || \
+			     bli_is_skew_hermitian( strucc ) ) \
+				kappa_use = &minus_kappa; \
 		} \
 \
 		/* If we are referencing the unstored part of a triangular matrix,
@@ -183,7 +192,7 @@ void PASTEMAC(ch,varname) \
 			  p10_dim, \
 			  p10_len, \
 			  p10_len_max, \
-			  kappa, \
+			  kappa_use, \
 			  c10, incc10, ldc10, \
 			  p10,         ldp, \
 			  cntx  \
@@ -235,13 +244,19 @@ void PASTEMAC(ch,varname) \
 		ctype* c12         = c + i * ldc; \
 		inc_t  incc12      = incc; \
 		inc_t  ldc12       = ldc; \
+		ctype* kappa_use   = kappa; \
 \
 		if ( bli_is_lower( uploc ) ) \
 		{ \
 			bli_reflect_to_stored_part( diagoffc - i, c12, incc12, ldc12 ); \
 \
-			if ( bli_is_hermitian( strucc ) ) \
+			if ( bli_is_hermitian( strucc ) || \
+			     bli_is_skew_hermitian( strucc ) ) \
 				bli_toggle_conj( &conjc12 ); \
+\
+			if ( bli_is_skew_symmetric( strucc ) || \
+			     bli_is_skew_hermitian( strucc ) ) \
+				kappa_use = &minus_kappa; \
 		} \
 \
 		/* If we are referencing the unstored part of a triangular matrix,
@@ -294,7 +309,7 @@ void PASTEMAC(ch,varname) \
 			  p12_dim, \
 			  p12_len, \
 			  p12_len_max, \
-			  kappa, \
+			  kappa_use, \
 			  c12, incc12, ldc12, \
 			  p12,         ldp, \
 			  cntx  \

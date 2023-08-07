@@ -42,7 +42,7 @@ do \
 	for ( dim_t k = 0; k < cdim; k++ ) \
 	for ( dim_t mn = mn_min; mn < mn_max; mn++ ) \
 	for ( dim_t d = 0; d < dfac; d++ ) \
-		PASTEMAC(ch,op)( kappa_cast, *(alpha1 + mn*inca + k*lda), *(pi1 + mn*dfac + d + k*ldp) ); \
+		PASTEMAC(ch,op)( kappa_use, *(alpha1 + mn*inca + k*lda), *(pi1 + mn*dfac + d + k*ldp) ); \
 } while(0)
 
 
@@ -90,17 +90,26 @@ void PASTEMAC3(ch,opname,arch,suf) \
 	      ctype* restrict pi1        = p; \
 \
 	/* write the strictly lower part if it exists */ \
-	if ( bli_is_lower( uploa ) || bli_is_herm_or_symm( struca ) ) \
+	if ( bli_is_lower( uploa ) || bli_is_herm_or_symm( struca ) || bli_is_skew_herm_or_symm( struca ) ) \
 	{ \
 		dim_t  inca_l  = inca; \
 		dim_t  lda_l   = lda; \
 		conj_t conja_l = conja; \
+		ctype  kappa_use; \
+\
+		PASTEMAC(ch,copys)( kappa_cast, kappa_use ); \
 \
 		if ( bli_is_upper( uploa ) ) \
 		{ \
 			bli_swap_incs( &inca_l, &lda_l ); \
-			if ( bli_is_hermitian( struca ) ) \
+\
+			if ( bli_is_hermitian( struca ) || \
+			     bli_is_skew_hermitian( struca ) ) \
 				bli_toggle_conj( &conja_l ); \
+\
+			if ( bli_is_skew_symmetric( struca ) || \
+			     bli_is_skew_hermitian( struca ) ) \
+				PASTEMAC(ch,neg2s)( kappa_cast, kappa_use ); \
 		} \
 \
 		if ( bli_is_conj( conja_l ) ) PACKM_DIAG_BODY_L( ctype, ch, scal2js ); \
@@ -109,17 +118,26 @@ void PASTEMAC3(ch,opname,arch,suf) \
 \
 	/* write the strictly upper part if it exists */ \
 	/* assume either symmetric, hermitian, or triangular */ \
-	if ( bli_is_upper( uploa ) || bli_is_herm_or_symm( struca ) ) \
+	if ( bli_is_upper( uploa ) || bli_is_herm_or_symm( struca ) || bli_is_skew_herm_or_symm( struca ) ) \
 	{ \
-		dim_t  inca_u  = inca; \
-		dim_t  lda_u   = lda; \
-		conj_t conja_u = conja; \
+		dim_t  inca_u    = inca; \
+		dim_t  lda_u     = lda; \
+		conj_t conja_u   = conja; \
+		ctype  kappa_use; \
+\
+		PASTEMAC(ch,copys)( kappa_cast, kappa_use ); \
 \
 		if ( bli_is_lower( uploa ) ) \
 		{ \
 			bli_swap_incs( &inca_u, &lda_u ); \
-			if ( bli_is_hermitian( struca ) ) \
+\
+			if ( bli_is_hermitian( struca ) || \
+			     bli_is_skew_hermitian( struca ) ) \
 				bli_toggle_conj( &conja_u ); \
+\
+			if ( bli_is_skew_symmetric( struca ) || \
+			     bli_is_skew_hermitian( struca ) ) \
+				PASTEMAC(ch,neg2s)( kappa_cast, kappa_use ); \
 		} \
 \
 		if ( bli_is_conj( conja_u ) ) PACKM_DIAG_BODY_U( ctype, ch, scal2js ); \
@@ -141,6 +159,17 @@ void PASTEMAC3(ch,opname,arch,suf) \
 			ctype mu; \
 			PASTEMAC(ch,copys)( *(alpha1 + mnk*(inca + lda)), mu ); \
 			PASTEMAC(ch,seti0s)( mu ); \
+			PASTEMAC(ch,scal2s)( kappa_cast, mu, *(pi1 + mnk*(dfac + ldp) + d) ); \
+		} \
+	} \
+	else if ( bli_is_skew_hermitian( struca ) ) \
+	{ \
+		for ( dim_t mnk = 0; mnk < cdim; ++mnk ) \
+		for ( dim_t d = 0; d < dfac; ++d ) \
+		{ \
+			ctype mu; \
+			PASTEMAC(ch,copys)( *(alpha1 + mnk*(inca + lda)), mu ); \
+			PASTEMAC(ch,setr0s)( mu ); \
 			PASTEMAC(ch,scal2s)( kappa_cast, mu, *(pi1 + mnk*(dfac + ldp) + d) ); \
 		} \
 	} \

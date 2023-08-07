@@ -268,6 +268,90 @@ void PASTEMAC(syr2k,BLIS_OAPI_EX_SUF)
 }
 
 
+void PASTEMAC(shr2k,BLIS_OAPI_EX_SUF)
+     (
+       const obj_t*  alpha,
+       const obj_t*  a,
+       const obj_t*  b,
+       const obj_t*  beta,
+       const obj_t*  c,
+       const cntx_t* cntx,
+       const rntm_t* rntm
+     )
+{
+	bli_init_once();
+
+	obj_t ah;
+	obj_t bh;
+	obj_t alphah;
+	obj_t minus_alphah = BLIS_OBJECT_INITIALIZER_1X1;
+
+	// Check parameters.
+	if ( bli_error_checking_is_enabled() )
+		bli_her2k_check( alpha, a, b, beta, c, cntx );
+
+	bli_obj_alias_to( alpha, &alphah );
+	bli_obj_toggle_conj( &alphah );
+
+	bli_negsc( &alphah, &minus_alphah );
+
+	bli_obj_alias_to( a, &ah );
+	bli_obj_toggle_trans( &ah );
+	bli_obj_toggle_conj( &ah );
+
+	bli_obj_alias_to( b, &bh );
+	bli_obj_toggle_trans( &bh );
+	bli_obj_toggle_conj( &bh );
+
+	// Invoke gemmt twice, using beta only the first time.
+	PASTEMAC(gemmt,BLIS_OAPI_EX_SUF)(         alpha, a, &bh,      beta, c, cntx, rntm );
+	PASTEMAC(gemmt,BLIS_OAPI_EX_SUF)( &minus_alphah, b, &ah, &BLIS_ONE, c, cntx, rntm );
+
+	// The skew-Hermitian rank-2k product was computed as alpha*A*B'-alpha'*B*A', even for
+	// the diagonal elements. Mathematically, the real components of
+	// diagonal elements of a skew-Hermitian rank-2k product should always be
+	// zero. However, in practice, they sometimes accumulate meaningless
+	// non-zero values. To prevent this, we explicitly set those values
+	// to zero before returning.
+	bli_setrd( &BLIS_ZERO, c );
+}
+
+
+void PASTEMAC(skr2k,BLIS_OAPI_EX_SUF)
+     (
+       const obj_t*  alpha,
+       const obj_t*  a,
+       const obj_t*  b,
+       const obj_t*  beta,
+       const obj_t*  c,
+       const cntx_t* cntx,
+       const rntm_t* rntm
+     )
+{
+	bli_init_once();
+
+	obj_t at;
+	obj_t bt;
+	obj_t minus_alpha = BLIS_OBJECT_INITIALIZER_1X1;
+
+	// Check parameters.
+	if ( bli_error_checking_is_enabled() )
+		bli_syr2k_check( alpha, a, b, beta, c, cntx );
+
+	bli_negsc( alpha, &minus_alpha );
+
+	bli_obj_alias_to( b, &bt );
+	bli_obj_toggle_trans( &bt );
+
+	bli_obj_alias_to( a, &at );
+	bli_obj_toggle_trans( &at );
+
+	// Invoke gemmt twice, using beta only the first time.
+	PASTEMAC(gemmt,BLIS_OAPI_EX_SUF)(        alpha, a, &bt,      beta, c, cntx, rntm );
+	PASTEMAC(gemmt,BLIS_OAPI_EX_SUF)( &minus_alpha, b, &at, &BLIS_ONE, c, cntx, rntm );
+}
+
+
 void PASTEMAC(hemm,BLIS_OAPI_EX_SUF)
      (
              side_t  side,
@@ -365,6 +449,106 @@ void PASTEMAC(symm,BLIS_OAPI_EX_SUF)
 
 	// Invoke the operation's front-end and request the default control tree.
 	bli_symm_front( side, alpha, a, b, beta, c, cntx, &rntm_l );
+}
+
+
+void PASTEMAC(shmm,BLIS_OAPI_EX_SUF)
+     (
+             side_t  side,
+       const obj_t*  alpha,
+       const obj_t*  a,
+       const obj_t*  b,
+       const obj_t*  beta,
+       const obj_t*  c,
+       const cntx_t* cntx,
+       const rntm_t* rntm
+     )
+{
+	bli_init_once();
+
+	// Initialize a local runtime with global settings if necessary. Note
+	// that in the case that a runtime is passed in, we make a local copy.
+	rntm_t rntm_l;
+	if ( rntm == NULL ) { bli_rntm_init_from_global( &rntm_l ); }
+	else                { rntm_l = *rntm;                       }
+
+	// Default to using native execution.
+	num_t dt = bli_obj_dt( c );
+	ind_t im = BLIS_NAT;
+
+	// If all matrix operands are complex and of the same storage datatype, try
+	// to get an induced method (if one is available and enabled).
+	if ( bli_obj_dt( a ) == bli_obj_dt( c ) &&
+	     bli_obj_dt( b ) == bli_obj_dt( c ) &&
+	     bli_obj_is_complex( c ) )
+	{
+		// Find the highest priority induced method that is both enabled and
+		// available for the current operation. (If an induced method is
+		// available but not enabled, or simply unavailable, BLIS_NAT will
+		// be returned here.)
+		im = bli_shmmind_find_avail( dt );
+	}
+
+	// If necessary, obtain a valid context from the gks using the induced
+	// method id determined above.
+	if ( cntx == NULL ) cntx = bli_gks_query_ind_cntx( im );
+
+	// Check the operands.
+	if ( bli_error_checking_is_enabled() )
+		bli_shmm_check( side, alpha, a, b, beta, c, cntx );
+
+	// Invoke the operation's front-end and request the default control tree.
+	bli_shmm_front( side, alpha, a, b, beta, c, cntx, &rntm_l );
+}
+
+
+void PASTEMAC(skmm,BLIS_OAPI_EX_SUF)
+     (
+             side_t  side,
+       const obj_t*  alpha,
+       const obj_t*  a,
+       const obj_t*  b,
+       const obj_t*  beta,
+       const obj_t*  c,
+       const cntx_t* cntx,
+       const rntm_t* rntm
+     )
+{
+	bli_init_once();
+
+	// Initialize a local runtime with global settings if necessary. Note
+	// that in the case that a runtime is passed in, we make a local copy.
+	rntm_t rntm_l;
+	if ( rntm == NULL ) { bli_rntm_init_from_global( &rntm_l ); }
+	else                { rntm_l = *rntm;                       }
+
+	// Default to using native execution.
+	num_t dt = bli_obj_dt( c );
+	ind_t im = BLIS_NAT;
+
+	// If all matrix operands are complex and of the same storage datatype, try
+	// to get an induced method (if one is available and enabled).
+	if ( bli_obj_dt( a ) == bli_obj_dt( c ) &&
+	     bli_obj_dt( b ) == bli_obj_dt( c ) &&
+	     bli_obj_is_complex( c ) )
+	{
+		// Find the highest priority induced method that is both enabled and
+		// available for the current operation. (If an induced method is
+		// available but not enabled, or simply unavailable, BLIS_NAT will
+		// be returned here.)
+		im = bli_skmmind_find_avail( dt );
+	}
+
+	// If necessary, obtain a valid context from the gks using the induced
+	// method id determined above.
+	if ( cntx == NULL ) cntx = bli_gks_query_ind_cntx( im );
+
+	// Check the operands.
+	if ( bli_error_checking_is_enabled() )
+		bli_skmm_check( side, alpha, a, b, beta, c, cntx );
+
+	// Invoke the operation's front-end and request the default control tree.
+	bli_skmm_front( side, alpha, a, b, beta, c, cntx, &rntm_l );
 }
 
 

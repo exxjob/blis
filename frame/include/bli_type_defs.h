@@ -312,14 +312,14 @@ typedef void  (*free_ft)  ( void*  p    );
 #define BLIS_PACK_REV_IF_LOWER_SHIFT       24
 #define BLIS_PACK_BUFFER_SHIFT             25
 #define BLIS_STRUC_SHIFT                   27
-#define BLIS_COMP_DT_SHIFT                 29
-#define   BLIS_COMP_DOMAIN_SHIFT           29
-#define   BLIS_COMP_PREC_SHIFT             30
 
 // info2
-#define BLIS_SCALAR_DT_SHIFT                0
-#define   BLIS_SCALAR_DOMAIN_SHIFT          0
-#define   BLIS_SCALAR_PREC_SHIFT            1
+#define BLIS_COMP_DT_SHIFT                  0
+#define   BLIS_COMP_DOMAIN_SHIFT            0
+#define   BLIS_COMP_PREC_SHIFT              1
+#define BLIS_SCALAR_DT_SHIFT                3
+#define   BLIS_SCALAR_DOMAIN_SHIFT          3
+#define   BLIS_SCALAR_PREC_SHIFT            4
 
 //
 // -- BLIS info bit field masks ------------------------------------------------
@@ -352,12 +352,12 @@ typedef void  (*free_ft)  ( void*  p    );
 #define BLIS_PACK_REV_IF_UPPER_BIT         ( 0x1  << BLIS_PACK_REV_IF_UPPER_SHIFT )
 #define BLIS_PACK_REV_IF_LOWER_BIT         ( 0x1  << BLIS_PACK_REV_IF_LOWER_SHIFT )
 #define BLIS_PACK_BUFFER_BITS              ( 0x3  << BLIS_PACK_BUFFER_SHIFT )
-#define BLIS_STRUC_BITS                    ( 0x3  << BLIS_STRUC_SHIFT )
+#define BLIS_STRUC_BITS                    ( 0x7  << BLIS_STRUC_SHIFT )
+
+// info2
 #define BLIS_COMP_DT_BITS                  ( 0x7  << BLIS_COMP_DT_SHIFT )
 #define   BLIS_COMP_DOMAIN_BIT             ( 0x1  << BLIS_COMP_DOMAIN_SHIFT )
 #define   BLIS_COMP_PREC_BIT               ( 0x1  << BLIS_COMP_PREC_SHIFT )
-
-// info2
 #define BLIS_SCALAR_DT_BITS                ( 0x7  << BLIS_SCALAR_DT_SHIFT )
 #define   BLIS_SCALAR_DOMAIN_BIT           ( 0x1  << BLIS_SCALAR_DOMAIN_SHIFT )
 #define   BLIS_SCALAR_PREC_BIT             ( 0x1  << BLIS_SCALAR_PREC_SHIFT )
@@ -413,6 +413,8 @@ typedef void  (*free_ft)  ( void*  p    );
 #define BLIS_BITVAL_HERMITIAN               ( 0x1 << BLIS_STRUC_SHIFT )
 #define BLIS_BITVAL_SYMMETRIC               ( 0x2 << BLIS_STRUC_SHIFT )
 #define BLIS_BITVAL_TRIANGULAR              ( 0x3 << BLIS_STRUC_SHIFT )
+#define BLIS_BITVAL_SKEW_HERMITIAN          ( 0x4 << BLIS_STRUC_SHIFT )
+#define BLIS_BITVAL_SKEW_SYMMETRIC          ( 0x5 << BLIS_STRUC_SHIFT )
 
 
 //
@@ -466,7 +468,9 @@ typedef enum
 	BLIS_GENERAL           = BLIS_BITVAL_GENERAL,
 	BLIS_HERMITIAN         = BLIS_BITVAL_HERMITIAN,
 	BLIS_SYMMETRIC         = BLIS_BITVAL_SYMMETRIC,
-	BLIS_TRIANGULAR        = BLIS_BITVAL_TRIANGULAR
+	BLIS_TRIANGULAR        = BLIS_BITVAL_TRIANGULAR,
+	BLIS_SKEW_HERMITIAN    = BLIS_BITVAL_SKEW_HERMITIAN,
+	BLIS_SKEW_SYMMETRIC    = BLIS_BITVAL_SKEW_SYMMETRIC,
 } struc_t;
 
 
@@ -854,19 +858,23 @@ typedef enum
 	BLIS_GEMM = 0,
 	BLIS_GEMMT,
 	BLIS_HEMM,
+	BLIS_SHMM,
 	BLIS_HERK,
 	BLIS_HER2K,
+	BLIS_SHR2K,
 	BLIS_SYMM,
+	BLIS_SKMM,
 	BLIS_SYRK,
 	BLIS_SYR2K,
+	BLIS_SKR2K,
 	BLIS_TRMM3,
 	BLIS_TRMM,
 	BLIS_TRSM,
 
-	BLIS_NOID
+	// BLIS_NOID (= BLIS_NUM_LEVEL3_OPS) must be last!
+	BLIS_NOID,
+	BLIS_NUM_LEVEL3_OPS = BLIS_NOID
 } opid_t;
-
-#define BLIS_NUM_LEVEL3_OPS 11
 
 
 // -- Blocksize ID type --
@@ -1533,6 +1541,8 @@ typedef enum
 	BLIS_EXPECTED_HERMITIAN_OBJECT             = ( -61),
 	BLIS_EXPECTED_SYMMETRIC_OBJECT             = ( -62),
 	BLIS_EXPECTED_TRIANGULAR_OBJECT            = ( -63),
+	BLIS_EXPECTED_SKEW_HERMITIAN_OBJECT        = ( -64),
+	BLIS_EXPECTED_SKEW_SYMMETRIC_OBJECT        = ( -65),
 
 	// Storage-specific errors
 	BLIS_EXPECTED_UPPER_OR_LOWER_OBJECT        = ( -70),

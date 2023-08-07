@@ -185,19 +185,19 @@ BLIS_INLINE prec_t bli_obj_exec_prec( const obj_t* obj )
 BLIS_INLINE num_t bli_obj_comp_dt( const obj_t* obj )
 {
 	return ( num_t )
-	       ( ( obj->info & BLIS_COMP_DT_BITS ) >> BLIS_COMP_DT_SHIFT );
+	       ( ( obj->info2 & BLIS_COMP_DT_BITS ) >> BLIS_COMP_DT_SHIFT );
 }
 
 BLIS_INLINE dom_t bli_obj_comp_domain( const obj_t* obj )
 {
 	return ( dom_t )
-	       ( ( obj->info & BLIS_COMP_DOMAIN_BIT ) >> BLIS_COMP_DT_SHIFT );
+	       ( ( obj->info2 & BLIS_COMP_DOMAIN_BIT ) >> BLIS_COMP_DT_SHIFT );
 }
 
 BLIS_INLINE prec_t bli_obj_comp_prec( const obj_t* obj )
 {
 	return ( prec_t )
-	       ( ( obj->info & BLIS_COMP_PREC_BIT ) >> BLIS_COMP_DT_SHIFT );
+	       ( ( obj->info2 & BLIS_COMP_PREC_BIT ) >> BLIS_COMP_DT_SHIFT );
 }
 
 // NOTE: This function queries info2.
@@ -398,6 +398,18 @@ BLIS_INLINE bool bli_obj_is_symmetric( const obj_t* obj )
 	       ( bli_obj_struc( obj ) == BLIS_BITVAL_SYMMETRIC );
 }
 
+BLIS_INLINE bool bli_obj_is_skew_hermitian( const obj_t* obj )
+{
+	return ( bool )
+	       ( bli_obj_struc( obj ) == BLIS_BITVAL_HERMITIAN );
+}
+
+BLIS_INLINE bool bli_obj_is_skew_symmetric( const obj_t* obj )
+{
+	return ( bool )
+	       ( bli_obj_struc( obj ) == BLIS_BITVAL_SYMMETRIC );
+}
+
 BLIS_INLINE bool bli_obj_is_triangular( const obj_t* obj )
 {
 	return ( bool )
@@ -502,25 +514,28 @@ BLIS_INLINE void bli_obj_set_exec_prec( prec_t dt, obj_t* obj )
 	              ( dt << BLIS_EXEC_DT_SHIFT ) );
 }
 
+// NOTE: This function queries and modifies info2.
 BLIS_INLINE void bli_obj_set_comp_dt( num_t dt, obj_t* obj )
 {
-	obj->info = ( objbits_t )
-	            ( ( obj->info & ~BLIS_COMP_DT_BITS ) |
-	              ( dt << BLIS_COMP_DT_SHIFT ) );
+	obj->info2 = ( objbits_t )
+	             ( ( obj->info2 & ~BLIS_COMP_DT_BITS ) |
+	               ( dt << BLIS_COMP_DT_SHIFT ) );
 }
 
+// NOTE: This function queries and modifies info2.
 BLIS_INLINE void bli_obj_set_comp_domain( dom_t dt, obj_t* obj )
 {
-	obj->info = ( objbits_t )
-	            ( ( obj->info & ~BLIS_COMP_DOMAIN_BIT ) |
+	obj->info2 = ( objbits_t )
+	            ( ( obj->info2 & ~BLIS_COMP_DOMAIN_BIT ) |
 	              ( dt << BLIS_COMP_DT_SHIFT ) );
 }
 
+// NOTE: This function queries and modifies info2.
 BLIS_INLINE void bli_obj_set_comp_prec( prec_t dt, obj_t* obj )
 {
-	obj->info = ( objbits_t )
-	            ( ( obj->info & ~BLIS_COMP_PREC_BIT ) |
-	              ( dt << BLIS_COMP_DT_SHIFT ) );
+	obj->info2 = ( objbits_t )
+	             ( ( obj->info2 & ~BLIS_COMP_PREC_BIT ) |
+	               ( dt << BLIS_COMP_DT_SHIFT ) );
 }
 
 // NOTE: This function queries and modifies info2.
@@ -622,6 +637,18 @@ BLIS_INLINE bool bli_obj_root_is_symmetric( const obj_t* obj )
 	       ( bli_obj_is_symmetric( bli_obj_root( obj ) ) );
 }
 
+BLIS_INLINE bool bli_obj_root_is_skew_hermitian( const obj_t* obj )
+{
+	return ( bool )
+	       ( bli_obj_is_skew_hermitian( bli_obj_root( obj ) ) );
+}
+
+BLIS_INLINE bool bli_obj_root_is_skew_symmetric( const obj_t* obj )
+{
+	return ( bool )
+	       ( bli_obj_is_skew_symmetric( bli_obj_root( obj ) ) );
+}
+
 BLIS_INLINE bool bli_obj_root_is_triangular( const obj_t* obj )
 {
 	return ( bool )
@@ -633,6 +660,13 @@ BLIS_INLINE bool bli_obj_root_is_herm_or_symm( const obj_t* obj )
 	return ( bool )
 	       ( bli_obj_is_hermitian( bli_obj_root( obj ) ) ||
 	         bli_obj_is_symmetric( bli_obj_root( obj ) ) );
+}
+
+BLIS_INLINE bool bli_obj_root_is_skew_herm_or_symm( const obj_t* obj )
+{
+	return ( bool )
+	       ( bli_obj_is_skew_hermitian( bli_obj_root( obj ) ) ||
+	         bli_obj_is_skew_symmetric( bli_obj_root( obj ) ) );
 }
 
 BLIS_INLINE bool bli_obj_root_is_upper( const obj_t* obj )

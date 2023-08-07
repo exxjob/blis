@@ -150,7 +150,7 @@ void bli_rntm_set_ways_for_op
 
 	// Now modify the number of ways, if necessary, based on the operation.
 
-	// Consider gemm (hemm, symm), gemmt (herk, her2k, syrk, syr2k), and
+	// Consider gemm (hemm, symm, shmm, skmm), gemmt (herk, her2k, shr2k, syrk, syr2k, skr2k), and
 	// trmm (trmm, trmm3).
 	if (
 #ifdef BLIS_ENABLE_JRIR_TLB
