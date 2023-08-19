@@ -225,25 +225,24 @@ void libblis_test_gemmt_experiment
 //bli_setsc(  1.0,  0.0, &alpha );
 //bli_setsc(  0.0,  0.0, &beta );
 
-	// Set the uplo property of C.
-	bli_obj_set_uplo( uploc, &c );
-
-	// Randomize C, make it densely symmetric, and zero the unstored triangle
-	// to ensure the implementation reads only from the stored region.
+	// Randomize C. Do NOT zero out the unused triangular portion
+	// so that we can detect if the implementation is improperly
+	// writing to this part of C.
 	libblis_test_mobj_randomize( params, TRUE, &c );
-	bli_mksymm( &c );
-	bli_mktrim( &c );
 
-	// Save C and set its uplo property.
-	bli_setm( &BLIS_ZERO, &c_save );
-	bli_obj_set_uplo( uploc, &c_save );
+	// Save the C matrix.
 	bli_copym( &c, &c_save );
+
+	// Set the uplo property of C and C_save. Do this after copying
+	// so that we also copy the "unstored" triangular portion.
+	bli_obj_set_uplo( uploc, &c );
+	bli_obj_set_uplo( uploc, &c_save );
 
 	// Apply the parameters.
 	bli_obj_set_conjtrans( transa, &a );
 	bli_obj_set_conjtrans( transb, &b );
 
-	// Repeat the experiment n_repeats times and record results. 
+	// Repeat the experiment n_repeats times and record results.
 	for ( i = 0; i < n_repeats; ++i )
 	{
 		bli_copym( &c_save, &c );
@@ -331,7 +330,7 @@ void libblis_test_gemmt_check
 	dim_t  m       = bli_obj_length( c );
 	//dim_t  k       = bli_obj_width_after_trans( a );
 
-	obj_t  norm;
+	obj_t  norm, beta_minus_one;
 	obj_t  t, v, q, z;
 
 	double junk;
@@ -356,13 +355,17 @@ void libblis_test_gemmt_check
 	// is negligible, where
 	//
 	//   v = C * t
-	//   z = ( beta * C_orig + alpha * transa(A) * transb(B) ) * t
-	//     = beta * C_orig * t + alpha * transa(A) * transb(B) * t
+	//   z = ( beta * C_orig + alpha * uplo( transa(A) * transb(B) ) ) * t
+	//     = beta * C_orig * t + alpha * uplo( transa(A) * transb(B) ) * t
 	//     = beta * C_orig * t + alpha * uplo(Q) * t
 	//     = beta * C_orig * t + z
 	//
 
 	bli_obj_scalar_init_detached( dt_real, &norm );
+	bli_obj_scalar_init_detached( dt, &beta_minus_one );
+
+	bli_copysc( beta,  &beta_minus_one );
+	bli_subsc( &BLIS_ONE, &beta_minus_one );
 
 	bli_obj_create( dt, m, 1, 0, 0, &t );
 	bli_obj_create( dt, m, 1, 0, 0, &v );
@@ -376,15 +379,16 @@ void libblis_test_gemmt_check
 	bli_gemv( &BLIS_ONE, c, &t, &BLIS_ZERO, &v );
 
 	bli_gemm( &BLIS_ONE, a, b, &BLIS_ZERO, &q );
-#if 1
 	bli_mktrim( &q );
 	bli_gemv( alpha, &q, &t, &BLIS_ZERO, &z );
-#else
-	bli_obj_set_struc( BLIS_TRIANGULAR, &q );
-	bli_copyv( &t, &z );
-	bli_trmv( alpha, &q, &z );
-#endif
-	bli_gemv( beta, c_orig, &t, &BLIS_ONE, &z );
+
+	// We have to account for the fact that only the stored portion
+	// of C is scaled by beta in gemmt. Thus, we do both a dense
+	// gemv and a "trmv" (using bli_mktrim) but with beta-1 as the scalar.
+	bli_gemv( &BLIS_ONE, c_orig, &t, &BLIS_ONE, &z );
+	bli_copym( c_orig, &q );
+	bli_mktrim( &q );
+	bli_gemv( &beta_minus_one, &q, &t, &BLIS_ONE, &z );
 
 	bli_subv( &z, &v );
 	bli_normfv( &v, &norm );
