@@ -342,9 +342,6 @@ void PASTEMAC2(ch,opname,EX_SUF) \
 	dim_t       offx; \
 	inc_t       incx; \
 \
-	/* If the datatype is real, the entire operation is a no-op. */ \
-	if ( bli_is_real( dt ) ) return; \
-\
 	if ( bli_zero_dim2( m, n ) ) return; \
 \
 	if ( bli_is_outside_diag( diagoffx, BLIS_NO_TRANSPOSE, m, n ) ) return; \
@@ -367,11 +364,10 @@ void PASTEMAC2(ch,opname,EX_SUF) \
 	} */ \
 \
 	/* Acquire the address of the real component of the first element,
-	   and scale the increment for use in the real domain. Note that the
-	   indexing into the real field only needs to work for complex
-	   datatypes since we return early for real domain types. */ \
+	   and scale the increment for use in the real domain if the data type is complex. */ \
 	x1   = ( ctype_r* )( x + offx ); \
-	incx = 2*incx; \
+	if ( bli_is_complex( dt ) ) \
+		incx = 2*incx; \
 \
 	/* Obtain a valid context from the gks if necessary. */ \
 	if ( cntx == NULL ) cntx = bli_gks_query_cntx(); \
@@ -406,6 +402,7 @@ void PASTEMAC2(ch,opname,EX_SUF) \
        BLIS_TAPI_EX_PARAMS  \
      ) \
 { \
+\
 	bli_init_once(); \
 \
 	BLIS_TAPI_EX_DECLS \

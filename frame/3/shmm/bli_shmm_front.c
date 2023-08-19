@@ -48,6 +48,7 @@ void bli_shmm_front
 {
 	bli_init_once();
 
+	obj_t   alpha_local;
 	obj_t   a_local;
 	obj_t   b_local;
 	obj_t   c_local;
@@ -60,6 +61,7 @@ void bli_shmm_front
 	}
 
 	// Alias A, B, and C in case we need to apply transformations.
+	bli_obj_scalar_detach( alpha, &alpha_local );
 	bli_obj_alias_to( a, &a_local );
 	bli_obj_alias_to( b, &b_local );
 	bli_obj_alias_to( c, &c_local );
@@ -98,6 +100,7 @@ void bli_shmm_front
 		bli_obj_induce_trans( &a_local );
 		bli_obj_induce_trans( &b_local );
 		bli_obj_induce_trans( &c_local );
+		bli_negsc( alpha, &alpha_local );
 	}
 
 #else
@@ -122,6 +125,7 @@ void bli_shmm_front
 		bli_obj_toggle_conj( &a_local );
 		bli_obj_induce_trans( &b_local );
 		bli_obj_induce_trans( &c_local );
+		bli_negsc( alpha, &alpha_local );
 	}
 
 	// If the Hermitian/symmetric matrix A is being multiplied from the right,
@@ -154,7 +158,7 @@ void bli_shmm_front
 	(
 	  bli_l3_int,
 	  BLIS_GEMM, // operation family id
-	  alpha,
+	  &alpha_local,
 	  &a_local,
 	  &b_local,
 	  beta,

@@ -361,7 +361,7 @@ void libblis_test_shr2k_check
 
 	libblis_test_vobj_randomize( params, TRUE, &t );
 
-	bli_hemv( &BLIS_ONE, c, &t, &BLIS_ZERO, &v );
+	bli_shmv( &BLIS_ONE, c, &t, &BLIS_ZERO, &v );
 
 	bli_gemv( &BLIS_ONE, &ah, &t, &BLIS_ZERO, &w2 );
 	bli_gemv( &BLIS_ONE, &bh, &t, &BLIS_ZERO, &w1 );

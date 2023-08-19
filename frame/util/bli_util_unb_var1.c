@@ -252,8 +252,9 @@ void PASTEMAC(ch,varname) \
        rntm_t* rntm  \
      ) \
 { \
-	doff_t  diagoffa; \
-	ctype*  minus_one = PASTEMAC(ch,m1); \
+	doff_t diagoffa; \
+	ctype* zero      = PASTEMAC(ch,0); \
+	ctype* minus_one = PASTEMAC(ch,m1); \
 \
 	/* If the dimension is zero, return early. */ \
 	if ( bli_zero_dim1( m ) ) return; \
@@ -275,6 +276,19 @@ void PASTEMAC(ch,varname) \
 	  m, \
 	  minus_one, \
 	  a, rs_a, cs_a, \
+	  a, rs_a, cs_a, \
+	  cntx, \
+	  rntm  \
+	); \
+\
+	/* Set the diagonal elements to zero. */ \
+	PASTEMAC2(ch,setd,BLIS_TAPI_EX_SUF) \
+	( \
+	  BLIS_NO_CONJUGATE, \
+	  0, \
+	  m, \
+	  m, \
+	  zero, \
 	  a, rs_a, cs_a, \
 	  cntx, \
 	  rntm  \

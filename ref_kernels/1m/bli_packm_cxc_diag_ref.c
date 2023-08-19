@@ -103,12 +103,10 @@ void PASTEMAC3(ch,opname,arch,suf) \
 		{ \
 			bli_swap_incs( &inca_l, &lda_l ); \
 \
-			if ( bli_is_hermitian( struca ) || \
-			     bli_is_skew_hermitian( struca ) ) \
+			if ( bli_is_hermitian( struca ) || bli_is_skew_hermitian( struca ) ) \
 				bli_toggle_conj( &conja_l ); \
 \
-			if ( bli_is_skew_symmetric( struca ) || \
-			     bli_is_skew_hermitian( struca ) ) \
+			if ( bli_is_skew_symmetric( struca ) || bli_is_skew_hermitian( struca ) ) \
 				PASTEMAC(ch,neg2s)( kappa_cast, kappa_use ); \
 		} \
 \
@@ -164,16 +162,36 @@ void PASTEMAC3(ch,opname,arch,suf) \
 	} \
 	else if ( bli_is_skew_hermitian( struca ) ) \
 	{ \
-		for ( dim_t mnk = 0; mnk < cdim; ++mnk ) \
-		for ( dim_t d = 0; d < dfac; ++d ) \
+		if ( bli_is_conj( conja ) ) \
 		{ \
-			ctype mu; \
-			PASTEMAC(ch,copys)( *(alpha1 + mnk*(inca + lda)), mu ); \
-			PASTEMAC(ch,setr0s)( mu ); \
-			PASTEMAC(ch,scal2s)( kappa_cast, mu, *(pi1 + mnk*(dfac + ldp) + d) ); \
+			for ( dim_t mnk = 0; mnk < cdim; ++mnk ) \
+			for ( dim_t d = 0; d < dfac; ++d ) \
+			{ \
+				ctype mu; \
+				PASTEMAC(ch,copys)( *(alpha1 + mnk*(inca + lda)), mu ); \
+				PASTEMAC(ch,setr0s)( mu ); \
+				PASTEMAC(ch,scal2js)( kappa_cast, mu, *(pi1 + mnk*(dfac + ldp) + d) ); \
+			} \
+		} \
+		else  \
+		{ \
+			for ( dim_t mnk = 0; mnk < cdim; ++mnk ) \
+			for ( dim_t d = 0; d < dfac; ++d ) \
+			{ \
+				ctype mu; \
+				PASTEMAC(ch,copys)( *(alpha1 + mnk*(inca + lda)), mu ); \
+				PASTEMAC(ch,setr0s)( mu ); \
+				PASTEMAC(ch,scal2s)( kappa_cast, mu, *(pi1 + mnk*(dfac + ldp) + d) ); \
+			} \
 		} \
 	} \
-	else if ( bli_is_conj( conja )) \
+	else if ( bli_is_skew_symmetric( struca ) ) \
+	{ \
+		for ( dim_t mnk = 0; mnk < cdim; ++mnk ) \
+		for ( dim_t d = 0; d < dfac; ++d ) \
+			PASTEMAC(ch,set0s)( *(pi1 + mnk*(dfac + ldp) + d) ); \
+	} \
+	else if ( bli_is_conj( conja ) ) \
 	{ \
 		for ( dim_t mnk = 0; mnk < cdim; ++mnk ) \
 		for ( dim_t d = 0; d < dfac; ++d ) \

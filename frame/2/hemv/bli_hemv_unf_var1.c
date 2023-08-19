@@ -209,6 +209,8 @@ void PASTEMAC(ch,varname) \
 				PASTEMAC(ch,seti0s)( alpha11_temp ); \
 			if ( bli_is_skew_hermitian( struc ) ) \
 				PASTEMAC(ch,setr0s)( alpha11_temp ); \
+			if ( bli_is_skew_symmetric( struc ) ) \
+				PASTEMAC(ch,set0s)( alpha11_temp ); \
 \
 			/* psi11 = psi11 + alpha * alpha11 * chi11; */ \
 			PASTEMAC(ch,scal2s)( *alpha, conjx_chi11, alpha_chi11 ); \

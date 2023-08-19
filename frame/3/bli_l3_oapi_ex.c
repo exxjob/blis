@@ -284,15 +284,16 @@ void PASTEMAC(shr2k,BLIS_OAPI_EX_SUF)
 	obj_t ah;
 	obj_t bh;
 	obj_t alphah;
-	obj_t minus_alphah = BLIS_OBJECT_INITIALIZER_1X1;
+	obj_t minus_alphah;
 
 	// Check parameters.
 	if ( bli_error_checking_is_enabled() )
-		bli_her2k_check( alpha, a, b, beta, c, cntx );
+		bli_shr2k_check( alpha, a, b, beta, c, cntx );
 
 	bli_obj_alias_to( alpha, &alphah );
 	bli_obj_toggle_conj( &alphah );
 
+	bli_obj_scalar_init_detached( bli_obj_dt( alpha ), &minus_alphah );
 	bli_negsc( &alphah, &minus_alphah );
 
 	bli_obj_alias_to( a, &ah );
@@ -332,12 +333,13 @@ void PASTEMAC(skr2k,BLIS_OAPI_EX_SUF)
 
 	obj_t at;
 	obj_t bt;
-	obj_t minus_alpha = BLIS_OBJECT_INITIALIZER_1X1;
+	obj_t minus_alpha;
 
 	// Check parameters.
 	if ( bli_error_checking_is_enabled() )
-		bli_syr2k_check( alpha, a, b, beta, c, cntx );
+		bli_skr2k_check( alpha, a, b, beta, c, cntx );
 
+	bli_obj_scalar_init_detached( bli_obj_dt( alpha ), &minus_alpha );
 	bli_negsc( alpha, &minus_alpha );
 
 	bli_obj_alias_to( b, &bt );

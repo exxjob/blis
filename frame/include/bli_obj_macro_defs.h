@@ -401,13 +401,13 @@ BLIS_INLINE bool bli_obj_is_symmetric( const obj_t* obj )
 BLIS_INLINE bool bli_obj_is_skew_hermitian( const obj_t* obj )
 {
 	return ( bool )
-	       ( bli_obj_struc( obj ) == BLIS_BITVAL_HERMITIAN );
+	       ( bli_obj_struc( obj ) == BLIS_BITVAL_SKEW_HERMITIAN );
 }
 
 BLIS_INLINE bool bli_obj_is_skew_symmetric( const obj_t* obj )
 {
 	return ( bool )
-	       ( bli_obj_struc( obj ) == BLIS_BITVAL_SYMMETRIC );
+	       ( bli_obj_struc( obj ) == BLIS_BITVAL_SKEW_SYMMETRIC );
 }
 
 BLIS_INLINE bool bli_obj_is_triangular( const obj_t* obj )

@@ -51,6 +51,22 @@ do { \
 } while (0)
 
 
+#define PACKM_SET1_0E( chr, mnk ) \
+do { \
+	PASTEMAC(chr,set0s)( *(pi1_ri + (mnk*2 + 0)*dfac + d + mnk*ldp2) ); \
+	PASTEMAC(chr,set0s)( *(pi1_ri + (mnk*2 + 1)*dfac + d + mnk*ldp2) ); \
+	PASTEMAC(chr,set0s)( *(pi1_ir + (mnk*2 + 0)*dfac + d + mnk*ldp2) ); \
+	PASTEMAC(chr,set0s)( *(pi1_ir + (mnk*2 + 1)*dfac + d + mnk*ldp2) ); \
+} while (0)
+
+
+#define PACKM_SET1_0R( chr, mnk ) \
+do { \
+	PASTEMAC(chr,set0s)( *(pi1_r + mnk*dfac + d + mnk*ldp2) ); \
+	PASTEMAC(chr,set0s)( *(pi1_i + mnk*dfac + d + mnk*ldp2) ); \
+} while (0)
+
+
 #define PACKM_SCAL_1E( ch, mn, k, op ) \
 do { \
 	PASTEMAC(ch,op)(  kappa_r, kappa_i, *(alpha1 +  mn       *inca2 + 0 + k*lda2), \
@@ -150,8 +166,6 @@ void PASTEMAC3(ch,opname,arch,suf) \
 	const inc_t       lda2    = 2 * lda; \
 	const inc_t       ldp2    = 2 * ldp; \
 \
-	      ctype_r           kappa_r = ( ( ctype_r* )kappa )[0]; \
-	      ctype_r           kappa_i = ( ( ctype_r* )kappa )[1]; \
 	const ctype_r* restrict alpha1  = ( const ctype_r* )a; \
 \
 	if ( bli_is_1e_packed( schema ) ) \
@@ -164,15 +178,21 @@ void PASTEMAC3(ch,opname,arch,suf) \
 		/* write the strictly lower part if it exists */ \
 		if ( bli_is_lower( uploa ) || bli_is_herm_or_symm( struca ) ) \
 		{ \
-			dim_t  inca_l2 = inca2; \
-			dim_t  lda_l2  = lda2; \
-			conj_t conja_l = conja; \
+			dim_t   inca_l2 = inca2; \
+			dim_t   lda_l2  = lda2; \
+			conj_t  conja_l = conja; \
+			ctype_r kappa_r = ( ( ctype_r* )kappa )[0]; \
+			ctype_r kappa_i = ( ( ctype_r* )kappa )[1]; \
 \
 			if ( bli_is_upper( uploa ) ) \
 			{ \
 				bli_swap_incs( &inca_l2, &lda_l2 ); \
-				if ( bli_is_hermitian( struca ) ) \
+\
+				if ( bli_is_hermitian( struca ) || bli_is_skew_hermitian( struca ) ) \
 				    bli_toggle_conj( &conja_l ); \
+\
+				if ( bli_is_skew_symmetric( struca ) || bli_is_skew_hermitian( struca ) ) \
+				    PASTEMAC(ch,negris)( kappa_r, kappa_i ); \
 			} \
 \
 			if ( bli_is_conj( conja_l ) ) PACKM_DIAG_BODY_1E_L( ch, scal2jris ); \
@@ -186,17 +206,26 @@ void PASTEMAC3(ch,opname,arch,suf) \
 			dim_t  inca_u2 = inca2; \
 			dim_t  lda_u2  = lda2; \
 			conj_t conja_u = conja; \
+			ctype_r kappa_r = ( ( ctype_r* )kappa )[0]; \
+			ctype_r kappa_i = ( ( ctype_r* )kappa )[1]; \
 \
 			if ( bli_is_lower( uploa ) ) \
 			{ \
 				bli_swap_incs( &inca_u2, &lda_u2 ); \
-				if ( bli_is_hermitian( struca ) ) \
+\
+				if ( bli_is_hermitian( struca ) || bli_is_skew_hermitian( struca ) ) \
 				    bli_toggle_conj( &conja_u ); \
+\
+				if ( bli_is_skew_symmetric( struca ) || bli_is_skew_hermitian( struca ) ) \
+				    PASTEMAC(ch,negris)( kappa_r, kappa_i ); \
 			} \
 \
 			if ( bli_is_conj( conja_u ) ) PACKM_DIAG_BODY_1E_U( ch, scal2jris ); \
 			else                          PACKM_DIAG_BODY_1E_U( ch, scal2ris ); \
 		} \
+\
+		ctype_r kappa_r = ( ( ctype_r* )kappa )[0]; \
+		ctype_r kappa_i = ( ( ctype_r* )kappa )[1]; \
 \
 		/* write the diagonal */ \
 		if ( bli_is_unit_diag( diaga ) ) \
@@ -216,6 +245,39 @@ void PASTEMAC3(ch,opname,arch,suf) \
 				PASTEMAC(chr,scal2s)( -kappa_i, mu_r, *(pi1_ir + (mnk*2 + 0)*dfac + d + mnk*ldp2) ); \
 				PASTEMAC(chr,scal2s)(  kappa_r, mu_r, *(pi1_ir + (mnk*2 + 1)*dfac + d + mnk*ldp2) ); \
 			} \
+		} \
+		else if ( bli_is_skew_hermitian( struca ) ) \
+		{ \
+			if ( bli_is_conj( conja ) ) \
+			{ \
+				for ( dim_t mnk = 0; mnk < cdim; ++mnk ) \
+				for ( dim_t d = 0; d < dfac; ++d ) \
+				{ \
+					ctype_r mu_i = *(alpha1 + mnk*(inca2 + lda2) + 1); \
+					PASTEMAC(chr,scal2s)(  kappa_i, mu_i, *(pi1_ri + (mnk*2 + 0)*dfac + d + mnk*ldp2) ); \
+					PASTEMAC(chr,scal2s)( -kappa_r, mu_i, *(pi1_ri + (mnk*2 + 1)*dfac + d + mnk*ldp2) ); \
+					PASTEMAC(chr,scal2s)(  kappa_r, mu_i, *(pi1_ir + (mnk*2 + 0)*dfac + d + mnk*ldp2) ); \
+					PASTEMAC(chr,scal2s)(  kappa_i, mu_i, *(pi1_ir + (mnk*2 + 1)*dfac + d + mnk*ldp2) ); \
+				} \
+			} \
+			else \
+			{ \
+				for ( dim_t mnk = 0; mnk < cdim; ++mnk ) \
+				for ( dim_t d = 0; d < dfac; ++d ) \
+				{ \
+					ctype_r mu_i = *(alpha1 + mnk*(inca2 + lda2) + 1); \
+					PASTEMAC(chr,scal2s)( -kappa_i, mu_i, *(pi1_ri + (mnk*2 + 0)*dfac + d + mnk*ldp2) ); \
+					PASTEMAC(chr,scal2s)(  kappa_r, mu_i, *(pi1_ri + (mnk*2 + 1)*dfac + d + mnk*ldp2) ); \
+					PASTEMAC(chr,scal2s)( -kappa_r, mu_i, *(pi1_ir + (mnk*2 + 0)*dfac + d + mnk*ldp2) ); \
+					PASTEMAC(chr,scal2s)( -kappa_i, mu_i, *(pi1_ir + (mnk*2 + 1)*dfac + d + mnk*ldp2) ); \
+				} \
+			} \
+		} \
+		else if ( bli_is_skew_symmetric( struca ) ) \
+		{ \
+			for ( dim_t mnk = 0; mnk < cdim; ++mnk ) \
+			for ( dim_t d = 0; d < dfac; ++d ) \
+				PACKM_SET1_0E( chr, mnk ); \
 		} \
 		else if ( bli_is_conj( conja )) \
 		{ \
@@ -263,12 +325,18 @@ void PASTEMAC3(ch,opname,arch,suf) \
 			dim_t  inca_l2 = inca2; \
 			dim_t  lda_l2  = lda2; \
 			conj_t conja_l = conja; \
+			ctype_r kappa_r = ( ( ctype_r* )kappa )[0]; \
+			ctype_r kappa_i = ( ( ctype_r* )kappa )[1]; \
 \
 			if ( bli_is_upper( uploa ) ) \
 			{ \
 				bli_swap_incs( &inca_l2, &lda_l2 ); \
-				if ( bli_is_hermitian( struca ) ) \
+\
+				if ( bli_is_hermitian( struca ) || bli_is_skew_hermitian( struca ) ) \
 				    bli_toggle_conj( &conja_l ); \
+\
+				if ( bli_is_skew_symmetric( struca ) || bli_is_skew_hermitian( struca ) ) \
+				    PASTEMAC(ch,negris)( kappa_r, kappa_i ); \
 			} \
 \
 			if ( bli_is_conj( conja_l ) ) PACKM_DIAG_BODY_1R_L( ch, scal2jris ); \
@@ -282,17 +350,26 @@ void PASTEMAC3(ch,opname,arch,suf) \
 			dim_t  inca_u2 = inca2; \
 			dim_t  lda_u2  = lda2; \
 			conj_t conja_u = conja; \
+			ctype_r kappa_r = ( ( ctype_r* )kappa )[0]; \
+			ctype_r kappa_i = ( ( ctype_r* )kappa )[1]; \
 \
 			if ( bli_is_lower( uploa ) ) \
 			{ \
 				bli_swap_incs( &inca_u2, &lda_u2 ); \
-				if ( bli_is_hermitian( struca ) ) \
+\
+				if ( bli_is_hermitian( struca ) || bli_is_skew_hermitian( struca ) ) \
 				    bli_toggle_conj( &conja_u ); \
+\
+				if ( bli_is_skew_symmetric( struca ) || bli_is_skew_hermitian( struca ) ) \
+				    PASTEMAC(ch,negris)( kappa_r, kappa_i ); \
 			} \
 \
 			if ( bli_is_conj( conja_u ) ) PACKM_DIAG_BODY_1R_U( ch, scal2jris ); \
 			else                          PACKM_DIAG_BODY_1R_U( ch, scal2ris ); \
 		} \
+\
+		ctype_r kappa_r = ( ( ctype_r* )kappa )[0]; \
+		ctype_r kappa_i = ( ( ctype_r* )kappa )[1]; \
 \
 		/* write the diagonal */ \
 		if ( bli_is_unit_diag( diaga ) ) \
@@ -310,6 +387,35 @@ void PASTEMAC3(ch,opname,arch,suf) \
 				PASTEMAC(chr,scal2s)( kappa_r, mu_r, *(pi1_r + mnk*(dfac + ldp2) + d) ); \
 				PASTEMAC(chr,scal2s)( kappa_i, mu_r, *(pi1_i + mnk*(dfac + ldp2) + d) ); \
 			} \
+		} \
+		else if ( bli_is_skew_hermitian( struca ) ) \
+		{ \
+			if ( bli_is_conj( conja ) ) \
+			{ \
+				for ( dim_t mnk = 0; mnk < cdim; ++mnk ) \
+				for ( dim_t d = 0; d < dfac; ++d ) \
+				{ \
+					ctype_r mu_i = *(alpha1 + mnk*(inca2 + lda2) + 1); \
+					PASTEMAC(chr,scal2s)(  kappa_i, mu_i, *(pi1_r + mnk*(dfac + ldp2) + d) ); \
+					PASTEMAC(chr,scal2s)( -kappa_r, mu_i, *(pi1_i + mnk*(dfac + ldp2) + d) ); \
+				} \
+			} \
+			else \
+			{ \
+				for ( dim_t mnk = 0; mnk < cdim; ++mnk ) \
+				for ( dim_t d = 0; d < dfac; ++d ) \
+				{ \
+					ctype_r mu_i = *(alpha1 + mnk*(inca2 + lda2) + 1); \
+					PASTEMAC(chr,scal2s)( -kappa_i, mu_i, *(pi1_r + mnk*(dfac + ldp2) + d) ); \
+					PASTEMAC(chr,scal2s)(  kappa_r, mu_i, *(pi1_i + mnk*(dfac + ldp2) + d) ); \
+				} \
+			} \
+		} \
+		else if ( bli_is_skew_symmetric( struca ) ) \
+		{ \
+			for ( dim_t mnk = 0; mnk < cdim; ++mnk ) \
+			for ( dim_t d = 0; d < dfac; ++d ) \
+				PACKM_SET1_0R( chr, mnk ); \
 		} \
 		else if ( bli_is_conj( conja ) ) \
 		{ \
